@@ -1,0 +1,41 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "env": {
+    "DJANGO_SETTINGS_MODULE": "myproject.settings",
+    "DATABASE_URL": "@postgresql://user:password@host:port/database"
+  },
+  "build": {
+    "builder": "NIXPACKS",
+    "install": [
+      "python3",
+      "python3-pip",
+      "build-essential",
+      "libpq-dev"
+    ]
+  },
+  "dependencies": {
+    "python": "3.9.x",
+    "pip": [
+      "django",
+      "psycopg2-binary",
+      "gunicorn"
+    ]
+  },
+  "commands": {
+    "start": "gunicorn myproject.wsgi:application --bind 0.0.0.0:$PORT"
+  },
+  "deploy": {
+    "restartPolicyType": "ALWAYS",
+    "env": {
+      "DJANGO_SETTINGS_MODULE": "myproject.settings",
+      "DATABASE_URL": "@postgresql://user:password@host:port/database"
+    },
+    "services": {
+      "web": {
+        "port": "$PORT",
+        "command": "start",
+        "public": true
+      }
+    }
+  }
+}
