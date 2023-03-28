@@ -111,7 +111,8 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'path.to.WebhookSignatureMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -137,11 +138,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_BACKEND = config('Email_Backend')
+EMAIL_HOST = config('Email_Host')
 EMAIL_PORT = 587
-EMAIL_HOST_USER = 'damilolaolawoore03@gmail.com'
-EMAIL_HOST_PASSWORD = 'zyjtzbtfyupfegmo'
+EMAIL_HOST_USER = config('Host_User')
+EMAIL_HOST_PASSWORD = config('Host_Password')
 EMAIL_USE_TLS = True
 
 
@@ -152,6 +153,8 @@ PAYSTACK_PUBLIC_KEY = config('PAY_PUBLIC_KEY')
 CELERY_BROKER_URL = 'amqp://guest:guest@localhost:5672//'
 CELERY_RESULT_BACKEND = 'rpc://'
 
+FLUTTERWAVE_PUBLIC_KEY=config('FLUTTERWAVE_PUBLIC_KEY')
+FLUTTERWAVE_SECRET_KEY=config('FLUTTERWAVE_SECURITY_KEY')
 
 
 # Database

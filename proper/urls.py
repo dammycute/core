@@ -5,10 +5,12 @@ urlpatterns = [
     path('post-property/<int:id>/', UpdatePropertyView.as_view()),
     path('property-lists/', PropertyListView.as_view()),
     path('property-lists/<int:pk>/', PropertyDetailView.as_view(), name='property-detail'),
-    # path('buy/', Buy.as_view()),
+    # path('investments/<int:pk>/sell/', Sell.as_view(), name='investment-sell'),
     path('buy/<int:product_id>/', Buy.as_view(), name='buy'),
     path('investments/', InvestmentListView.as_view(), name='investment-list'),
-    # path('wallet/<int:pk>/', WalletView.as_view(), name='wallet'),
-    # path('initiate-payment/', PaystackInitiateView.as_view(), name='initiate-payment'),
+    path('payment/link/', FlutterwavePaymentLink.as_view(), name='payment_link'),
+    path('payment/webhook/', FlutterwaveWebhook.as_view(), name='payment_link'),
+    path('withdraw-to-bank/', WithdrawToBankAPIView.as_view(), name='withdraw-to-bank'),
+    # path('property-lists/', PropertyListView.as_view()),
 
 ]

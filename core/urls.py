@@ -8,7 +8,7 @@ from business.views import UserDetailView
 router = DefaultRouter()
 router.register('customer', UserDetailView)
 # router.register('order', OrderViewSet)
-
+from proper.views import DashboardView
 # urlpatterns = router.urls,
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
@@ -33,6 +33,7 @@ schema_view = get_schema_view(
    
 
 urlpatterns = [
+    path("", DashboardView.as_view(), name='Dashboard'),
     path("swagger/", schema_view.with_ui("swagger", cache_timeout=0), name="schema-swagger-ui"),
     path('admin/', admin.site.urls),
     path('auth/', include('djoser.urls')),

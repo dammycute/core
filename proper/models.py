@@ -6,6 +6,8 @@ import datetime
 from cloudinary_storage.storage import RawMediaCloudinaryStorage
 
 
+
+
 class MyCloudinaryStorage(RawMediaCloudinaryStorage):
     folder = "property/images"
 
@@ -47,18 +49,30 @@ class Wallet(models.Model):
     balance = models.DecimalField(max_digits=10, decimal_places=2)
     last_updated = models.DateTimeField(auto_now=True)
 
-
-class Transaction(models.Model):
-    amount = models.FloatField()
-    reference = models.CharField(max_length=100)
-    status = models.CharField(max_length=20)
-
     def __str__(self):
         return str(self.balance)
+
+
+class Transaction(models.Model):
+    PENDING = 'PENDING'
+    COMPLETED = 'COMPLETED'
+    FAILED = 'FAILED'
+    STATUS_CHOICES = [
+        (PENDING, 'Pending'),
+        (COMPLETED, 'Completed'),
+        (FAILED, 'Failed'),
+    ]
     
-    # class Investment(models.Model):
-    #     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    #     user_property = models.ForeignKey(Property, null=True, on_delete=models.CASCADE)
+    user=models.ForeignKey(CustomUser, on_delete=models.CASCADE,null=True)
+    customer= models.ForeignKey(CustomerDetails, on_delete=models.CASCADE,  null=True)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
+    tx_ref = models.CharField(max_length=50, unique=True, null=True)
+    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='transactions', null=True)
+    
+    def __str__(self):
+        return self.tx_ref
+
 
 
 class Order(models.Model):
@@ -91,21 +105,7 @@ class Investment(models.Model):
     end_date = models.DateField(null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    # is_agreed = models.BooleanField(default=False)
-
-    # def save(self, *args, **kwargs):
-    #     # Calculate the number of months since the investment started
-    #     today = datetime.date.today()
-    #     elapsed_months = (today.year - self.start_date.year) * 12 + (today.month - self.start_date.month)
-
-    #     # Calculate the current value based on the number of elapsed months and the investment's ROI
-    #     current_value = self.total_price * (1 + ((self.roi / 12) / 100) * elapsed_months)
-
-    #     # Update the current value field of the investment object
-    #     self.current_value = current_value
-
-    #     # Save the investment object
-    #     super().save(*args, **kwargs)
+    
 
     def calculate_roi(self, date):
         days_since_start = (date - self.start_date).days
@@ -114,3 +114,51 @@ class Investment(models.Model):
         return roi
 
 
+class BankAccount(models.Model):
+    BANK_CHOICES = (
+        ('access', 'Access Bank'),
+        ('citibank', 'Citibank'),
+        ('diamond', 'Diamond Bank'),
+        ('ecobank', 'Ecobank'),
+        ('fidelity', 'Fidelity Bank'),
+        ('first_bank', 'First Bank'),
+        ('fcmb', 'First City Monument Bank'),
+        ('gtb', 'Guaranty Trust Bank'),
+        ('heritage', 'Heritage Bank'),
+        ('keystone', 'Keystone Bank'),
+        ('polaris', 'Polaris Bank'),
+        ('providus', 'Providus Bank'),
+        ('stanbic', 'Stanbic IBTC Bank'),
+        ('standard_chartered', 'Standard Chartered Bank'),
+        ('sterling', 'Sterling Bank'),
+        ('suntrust', 'Suntrust Bank'),
+        ('union', 'Union Bank'),
+        ('uba', 'United Bank for Africa'),
+        ('unity', 'Unity Bank'),
+        ('wema', 'Wema Bank'),
+        ('zenith', 'Zenith Bank'),
+        ('alat', 'ALAT by WEMA'),
+        ('jubilee', 'Jubilee Bank'),
+        ('sparkle', 'Sparkle'),
+        ('kuda', 'Kuda Bank'),
+        ('opay', 'OPay'),
+        ('palmpay', 'PalmPay'),
+    )
+
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    account_number = models.CharField(max_length=10)
+    
+    # bank_code = models.CharField(max_length=10, blank=True)
+    amount = models.CharField(max_length=10)
+    bank = models.CharField(choices=BANK_CHOICES, max_length=50)
+
+    def __str__(self):
+        return f"{self.user.username}'s {self.bank} Account ({self.account_number})"
+
+
+
+# class BankAccount(models.Model):
+#     user = models.ForeignKey(User, on_delete=models.CASCADE)
+#     account_number = models.CharField(max_length=20)
+#     bank_code = models.CharField(max_length=10)
+#     account_name = models.CharField(max_length=255)

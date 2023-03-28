@@ -74,4 +74,12 @@ class WalletSerializer(serializers.ModelSerializer):
 class TransactionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
-        fields = '__all__'
+        fields = ('amount',)
+
+
+class BankAccountSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BankAccount
+        fields = ('account_number', 'bank', 'amount')
+        read_only_fields = ('id', 'user', 'created_at', 'updated_at')
+        

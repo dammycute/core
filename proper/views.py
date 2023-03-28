@@ -1,15 +1,24 @@
 from django.shortcuts import render
 from rest_framework import generics, permissions, viewsets, status
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.exceptions import ValidationError, PermissionDenied
 from .serializers import *
+import uuid
+from django.contrib.auth.mixins import LoginRequiredMixin
+# from django.views.generic.edit import CreateAPIView
 import datetime
 from dateutil.relativedelta import relativedelta
 from rest_framework import exceptions
 import requests
+from django.conf import settings
+from django.shortcuts import get_object_or_404
+from rest_framework.generics import get_object_or_404
+from rest_framework import status
 from django.urls import reverse
 from rest_framework.parsers import MultiPartParser, FormParser
-
+from celery import shared_task
+from django.http import JsonResponse
 from .models import *
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 
@@ -18,6 +27,22 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 class IsOwnerOfObject(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         return obj == request.user
+
+
+from django.db.models import Sum
+
+class DashboardView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request, format=None):
+        wallet = Wallet.objects.filter(user=request.user).first()
+        investments = Investment.objects.filter(user=request.user).aggregate(total_amount=Sum('current_value'))['total_amount']
+
+        data = {
+            'wallet_balance': wallet.balance if wallet else None,
+            'investment': investments,
+        }
+
+        return Response(data)
 
 class CreatePropertyView(generics.ListCreateAPIView):
     permission_classes = [IsAdminUser]
@@ -77,36 +102,44 @@ def update_investment_value(investment_id):
     investment.current_value = investment.total_price * (1 + ((investment.roi / 12) / 100) * elapsed_months)
     investment.save()
 
+
+# ======= Buy View ==========eqqqweeqqq
+
+from django.db import transaction
+
 class Buy(generics.CreateAPIView):
     permission_classes = [IsAuthenticated]
     queryset = Investment.objects.select_related('product').all()
     serializer_class = InvestmentSerializer
 
+    @transaction.atomic
     def create(self, request, *args, **kwargs):
         try:
             product_id = kwargs['product_id']  # Get the product ID from the URL
             product = Property.objects.get(pk=product_id)
-            # product = Property.objects.get(pk=request.data.get('product'))
             slots = int(request.data.get('slots'))
             if slots <= 0:
                 raise ValidationError({'slots': 'Slots must be greater than zero'})
-            # if product.is_agreed == False:
-            #     raise ValidationError({'Terms': 'Terms and Condition must be accepted'})
             total_price = product.price_per_slot * slots
             roi = product.roi
             
+            wallet = Wallet.objects.select_for_update().get(user=self.request.user)
+            if wallet.balance < total_price:
+                raise ValidationError({'wallet': 'Insufficient funds'})
+            wallet.balance -= total_price
+            wallet.save()
+
             investment = Investment.objects.create(
                 user=self.request.user,
                 product=product,
                 slots=slots,
                 start_date=datetime.date.today(),
                 end_date=datetime.date.today() + relativedelta(months=product.duration),
-                
             )
             today = datetime.date.today()
-            elapsed_months = (today.year - investment.start_date.year) * 12 + (today.month - investment.start_date.month)
             investment.total_price = total_price
             investment.roi = roi
+            elapsed_months = (today.year - investment.start_date.year) * 12 + (today.month - investment.start_date.month)
             investment.current_value = total_price * (1 + ((roi / 12) / 100) * elapsed_months)
             investment.save()
 
@@ -115,9 +148,74 @@ class Buy(generics.CreateAPIView):
             return Response({'investment': investment.pk}, status=status.HTTP_201_CREATED)
         except Property.DoesNotExist:
             raise ValidationError({'property': 'Invalid property id'})
+        # except Wallet.DoesNotExist:
+        #     raise ValidationError({'wallet': 'Wallet not found for the user'})
+        except Exception as e:
+            raise ValidationError({'error': str(e)})
+        
+
+# ======== Sell Endpoint=========
+
+class Sell(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, investment_id):
+        try:
+            investment = Investment.objects.select_related('product').get(pk=investment_id)
+            seller = investment.user
+            buyer_id = request.data.get('buyer')
+            buyer = CustomUser.objects.get(pk=buyer_id)
+            if seller == buyer:
+                raise ValidationError({'buyer': 'You cannot sell to yourself'})
+
+            price = investment.total_price
+
+            # check if buyer has enough funds in their wallet
+            buyer_wallet = Wallet.objects.filter(user=buyer).first()
+            if not buyer_wallet or buyer_wallet.balance < price:
+                raise ValidationError({'buyer': 'Insufficient funds to buy investment'})
+
+            with transaction.atomic():
+                # deduct amount from buyer's wallet
+                buyer_wallet.balance -= price
+                buyer_wallet.save()
+
+                # credit amount to seller's wallet
+                seller_wallet = Wallet.objects.filter(user=seller).first()
+                if not seller_wallet:
+                    seller_wallet = Wallet.objects.create(user=seller, balance=0)
+                seller_wallet.balance += price
+                seller_wallet.save()
+
+                # create a new Investment object for the buyer
+                new_investment = Investment.objects.create(
+                    user=buyer,
+                    product=investment.product,
+                    slots=investment.slots,
+                    start_date=investment.start_date,
+                    end_date=investment.end_date,
+                    total_price=investment.total_price,
+                    roi=investment.roi
+                )
+
+                # Trigger Celery task to update current value each month for new investment
+                update_investment_value.apply_async(args=[new_investment.id], eta=new_investment.end_date.replace(day=1))
+
+                # delete the original investment
+                investment.delete()
+
+            return Response({'message': 'Investment sold successfully'}, status=status.HTTP_200_OK)
+        except Investment.DoesNotExist:
+            raise ValidationError({'investment': 'Invalid investment id'})
+        # except CustomUser.DoesNotExist:
+        #     raise ValidationError({'buyer': 'Invalid buyer id'})
         except Exception as e:
             raise ValidationError({'error': str(e)})
 
+
+
+
+# ==================== This is the Endpoint that list out the investment of the user===========
 
 class InvestmentListView(generics.ListAPIView):
     queryset = Investment.objects.all()
@@ -126,45 +224,174 @@ class InvestmentListView(generics.ListAPIView):
     def get_queryset(self):
         return self.queryset.filter(user=self.request.user)
 
+# ==========================Flutterwave Payment Endpoint====================
 
+from django.shortcuts import redirect
 
+class FlutterwavePaymentLink(APIView):
+    serializer_class = TransactionSerializer
+    queryset = Transaction.objects.all()
+    
+    def post(self, request, *args, **kwargs):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-# class PaystackInitiateView(generics.CreateAPIView):
-#     serializer_class = TransactionSerializer
-
-#     def perform_create(self, serializer):
-#         # get the transaction data from the serializer
-#         amount = serializer.validated_data.get('amount')
-#         reference = serializer.validated_data.get('reference')
-
-#         #get the secret key
-#         api_key = settings.PAYSTACK_SECRET_KEY
+        # Save the Transaction object to the database
+        transaction = serializer.save()
         
-#         # make a request to Paystack API to initiate the transaction
-#         paystack_response = requests.post(
-#             "https://api.paystack.co/transaction/initialize",
-#             headers={
-#                 "Authorization": "Bearer ()".format(api_key),
-#                 "Content-Type": "application/json"
-#             },
-#             json={
-#                 "amount": amount,
-#                 "reference": reference,
-#                 "callback_url": "http://127.0.0.1:8000/proper/investments/",
-#             }
-#         )
+        # Generate the tx_ref and payment URL
+        tx_ref = uuid.uuid4().hex
+        amount = request.data.get('amount')
+        if not amount:
+            return Response({"error": "Amount not provided"}, status=400)
+        
+        url = "https://api.flutterwave.com/v3/payments"
+        headers = {
+            "Authorization": f'Bearer {settings.FLUTTERWAVE_SECRET_KEY}',
+            "Content-Type": "application/json"
+        }
 
-#         # check if the request was successful
-#         if paystack_response.status_code == 200:
-#             # get the authorization URL from the Paystack response
-#             authorization_url = paystack_response.json().get('data').get('authorization_url')
+        payload = {
+            "tx_ref": tx_ref,
+            "amount": str(amount),
+            "currency": "NGN",
+            "redirect_url": "https://www.realowndigital.com/",
+            "payment_options": "card",
+            "meta": {
+                "consumer_id": request.user.id,
+                "consumer_mac": "92a3-912ba-1192a"
+            },
+            "customer": {
+                "email": request.user.email,
+            },
+            "customizations": {
+                "title": "RealOwn",
+                "description": "Payment for RealOwn",
+                "logo": "https://drive.google.com/file/d/1dIWGQYH3ayKiG_xUw-JQuXSt2cfuu4HF/view?usp=drivesdk"
+            }
+        }
 
-#             # save the transaction to the database
-#             serializer.save(status="INITIATED", authorization_url=authorization_url)
-#         else:
-#             # raise an exception if the request to Paystack API failed
-#             raise exceptions.APIException("Failed to initiate the transaction with Paystack")
+        # Make a request to Flutterwave's API to create the payment link
+        response = requests.post(url, headers=headers, json=payload)
+
+        try:
+            payment_url = response.json()["data"]["link"]
+        except (ValueError, KeyError):
+            return Response({"error": "An error occurred while processing your request. Please try again later."}, status=500)
+        
+        # Redirect the user to the payment URL
+        return redirect(payment_url)
 
 
+# Webhook View
+
+import json
+import base64
+import hmac
+from hashlib import sha256
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from decimal import Decimal
+
+
+
+class FlutterwaveWebhook(APIView):
+    def post(self, request):
+        secret_key = settings.FLUTTERWAVE_SECRET_KEY  # replace with your Flutterwave secret key
+        signature = request.META.get('HTTP_VERIF_HASH')
+        if not signature:
+            return Response({"error": "No signature found."}, status=400)
+
+        data = request.body
+        hashed_payload = hmac.new(secret_key.encode('utf-8'), msg=data, digestmod=sha256).digest()
+        computed_signature = base64.b64encode(hashed_payload).decode('utf-8')
+
+        if signature != computed_signature:
+            return Response({"error": "Invalid signature."}, status=400)
+
+        data = json.loads(data)
+        if data["event"] == "payment.completed":
+            tx_ref = data["data"]["tx_ref"]
+            amount_paid = Decimal(data["data"]["charged_amount"])
+            transaction = Transaction.objects.filter(tx_ref=tx_ref).first()
+            if transaction:
+                wallet = Wallet.objects.filter(user=transaction.user).first()
+                if wallet:
+                    wallet.balance += amount_paid
+                    wallet.save()
+                    return Response({"message": "Wallet balance updated successfully."}, status=200)
+                else:
+                    return Response({"error": "Wallet not found for the user."}, status=404)
+            else:
+                return Response({"error": "Transaction not found."}, status=404)
+        else:
+            return Response({"message": "Event not supported."}, status=400)
+
+
+import requests
+from rest_framework import generics, status
+from rest_framework.response import Response
+
+
+
+class WithdrawToBankAPIView(generics.CreateAPIView):
+    serializer_class = BankAccountSerializer
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        bank_account = serializer.validated_data
+
+        # Get bank code from Flutterwave API using bank name
+        bank_name = bank_account['bank']
+        response = requests.get(f'https://api.flutterwave.com/v3/banks',
+                                headers={'Authorization': f'Bearer {settings.FLUTTERWAVE_SECRET_KEY}'})
+        if response.status_code != 200:
+            return Response({'message': 'Unable to get bank code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        bank_data = response.json()['data'][0]
+        bank_account['bank_code'] = bank_data['code']
+
+        # Verify account name using Flutterwave API
+        account_number = bank_account['account_number']
+        response = requests.get(f'https://api.flutterwave.com/v3/accounts/resolve'
+                                f'account_bank={bank_data["code"]}',
+                                headers={'Authorization': f'Bearer {settings.FLUTTERWAVE_SECRET_KEY}'})
+        if response.status_code != 200:
+            return Response({'message': 'Unable to verify account name.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        account_data = response.json()['data']
+        account_name = account_data['account_name']
+
+        if account_name.lower() != bank_account['account_name'].lower():
+            return Response({'message': 'Account name does not match.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Deduct transfer amount from user wallet
+        user = self.request.user
+        wallet = Wallet.objects.get(user=user)
+        transfer_amount = bank_account['amount']
+        if wallet.balance < transfer_amount:
+            return Response({'message': 'Insufficient balance.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        wallet.balance -= transfer_amount
+        wallet.save()
+
+        # Initiate transfer to user bank account using Flutterwave API
+        payload = {
+            "account_bank": bank_account['bank_code'],
+            "account_number": account_number,
+            "amount": transfer_amount,
+            "narration": "Wallet withdrawal to bank account",
+            "currency": "NGN",
+            "reference": f"wallet_to_bank_{user.id}"
+        }
+
+        response = requests.post('https://api.flutterwave.com/v3/transfers', json=payload,
+                                 headers={'Authorization': f'Bearer {settings.FLUTTERWAVE_SECRET_KEY}'})
+        if response.status_code == 200:
+            return Response({'message': 'Transfer successful.'}, status=status.HTTP_200_OK)
+        else:
+            return Response({'message': 'Unable to initiate transfer.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
