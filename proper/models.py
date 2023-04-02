@@ -54,9 +54,9 @@ class Wallet(models.Model):
 
 
 class Transaction(models.Model):
-    PENDING = 'PENDING'
-    COMPLETED = 'COMPLETED'
-    FAILED = 'FAILED'
+    PENDING = 'Pending'
+    COMPLETED = 'Completed'
+    FAILED = 'Failed'
     STATUS_CHOICES = [
         (PENDING, 'Pending'),
         (COMPLETED, 'Completed'),
@@ -68,10 +68,11 @@ class Transaction(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default=PENDING)
     tx_ref = models.CharField(max_length=50, unique=True, null=True)
-    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, related_name='transactions', null=True)
-    
+    wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, null=True)
+
+
     def __str__(self):
-        return self.tx_ref
+        return str(self.tx_ref)
 
 
 

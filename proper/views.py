@@ -226,25 +226,159 @@ class InvestmentListView(generics.ListAPIView):
 
 # ==========================Flutterwave Payment Endpoint====================
 
-from django.shortcuts import redirect
+# from django.shortcuts import redirect
 
-class FlutterwavePaymentLink(APIView):
-    serializer_class = TransactionSerializer
-    queryset = Transaction.objects.all()
+# class FlutterwavePaymentLink(APIView):
+#     serializer_class = TransactionSerializer
+#     queryset = Transaction.objects.all()
     
-    def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data)
+#     def post(self, request, *args, **kwargs):
+#         serializer = self.serializer_class(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+
+#         # Save the Transaction object to the database
+#         transaction = serializer.save()
+        
+#         # Generate the tx_ref and payment URL
+#         tx_ref = uuid.uuid4().hex
+#         amount = request.data.get('amount')
+#         if not amount:
+#             return Response({"error": "Amount not provided"}, status=400)
+        
+#         url = "https://api.flutterwave.com/v3/payments"
+#         headers = {
+#             "Authorization": f'Bearer {settings.FLUTTERWAVE_SECRET_KEY}',
+#             "Content-Type": "application/json"
+#         }
+
+#         payload = {
+#             "tx_ref": tx_ref,
+#             "amount": str(amount),
+#             "currency": "NGN",
+#             "redirect_url": "https://www.realowndigital.com/",
+#             "payment_options": "card",
+#             "meta": {
+#                 "consumer_id": request.user.id,
+#                 "consumer_mac": "92a3-912ba-1192a"
+#             },
+#             "customer": {
+#                 "email": request.user.email,
+#             },
+#             "customizations": {
+#                 "title": "RealOwn",
+#                 "description": "Payment for RealOwn",
+#                 "logo": "https://drive.google.com/file/d/1dIWGQYH3ayKiG_xUw-JQuXSt2cfuu4HF/view?usp=drivesdk"
+#             }
+#         }
+
+#         # Make a request to Flutterwave's API to create the payment link
+#         response = requests.post(url, headers=headers, json=payload)
+
+#         try:
+#             payment_url = response.json()["data"]["link"]
+#         except (ValueError, KeyError):
+#             return Response({"error": "An error occurred while processing your request. Please try again later."}, status=500)
+        
+#         # Redirect the user to the payment URL
+#         return redirect(payment_url)
+
+
+# from django.shortcuts import redirect
+# import uuid
+# import requests
+# from django.conf import settings
+
+# class FlutterwavePaymentLink(generics.CreateAPIView):
+#     serializer_class = TransactionSerializer
+
+#     def create(self, request, *args, **kwargs):
+#         serializer = self.get_serializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+
+#         # Save the Transaction object to the database
+#         transaction = serializer.save()
+
+#         # Generate the tx_ref and payment URL
+#         tx_ref = uuid.uuid4().hex
+#         amount = serializer.validated_data['amount']
+#         if not amount:
+#             return Response({"error": "Amount not provided"}, status=400)
+
+#         url = "https://api.flutterwave.com/v3/payments"
+#         headers = {
+#             "Authorization": f'Bearer {settings.FLUTTERWAVE_SECRET_KEY}',
+#             "Content-Type": "application/json"
+#         }
+
+#         payload = {
+#             "tx_ref": tx_ref,
+#             "amount": str(amount),
+#             "currency": "NGN",
+#             "redirect_url": "https://www.realowndigital.com/",
+#             "payment_options": "card",
+#             "meta": {
+#                 "consumer_id": request.user.id,
+#                 "consumer_mac": "92a3-912ba-1192a"
+#             },
+#             "customer": {
+#                 "email": request.user.email,
+#             },
+#             "customizations": {
+#                 "title": "RealOwn",
+#                 "description": "Payment for RealOwn",
+#                 "logo": "https://drive.google.com/file/d/1dIWGQYH3ayKiG_xUw-JQuXSt2cfuu4HF/view?usp=drivesdk"
+#             }
+#         }
+
+#         # Make a request to Flutterwave's API to create the payment link
+#         response = requests.post(url, headers=headers, json=payload)
+
+#         try:
+#             payment_url = response.json()["data"]["link"]
+#         except (ValueError, KeyError):
+#             return Response({"error": "An error occurred while processing your request. Please try again later."}, status=500)
+
+#         # Redirect the user to the payment URL
+#         return redirect(payment_url + f"?amount={amount}")
+
+
+from django.shortcuts import redirect
+from django.db import transaction
+import uuid
+import requests
+from rest_framework.generics import CreateAPIView
+from rest_framework.response import Response
+
+from .serializers import TransactionSerializer
+from .models import Transaction
+from django.contrib.auth import get_user_model
+
+class FlutterwavePaymentLink(CreateAPIView):
+    serializer_class = TransactionSerializer
+
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # Save the Transaction object to the database
-        transaction = serializer.save()
-        
-        # Generate the tx_ref and payment URL
-        tx_ref = uuid.uuid4().hex
-        amount = request.data.get('amount')
+        # Save the Transaction object to the database with a 
+        User = request.user
+        customer = CustomerDetails.objects.get(user=request.user)
+        wallet = Wallet.objects.get(user=request.user)
+        transaction = Transaction.objects.create(
+            user=User,
+            customer=customer,
+            amount=serializer.validated_data['amount'],
+            status=Transaction.PENDING,
+            tx_ref=uuid.uuid4().hex,
+            wallet=wallet
+        )
+        tx_ref = transaction.tx_ref
+
+        amount = serializer.validated_data['amount']
         if not amount:
             return Response({"error": "Amount not provided"}, status=400)
-        
+
         url = "https://api.flutterwave.com/v3/payments"
         headers = {
             "Authorization": f'Bearer {settings.FLUTTERWAVE_SECRET_KEY}',
@@ -277,55 +411,53 @@ class FlutterwavePaymentLink(APIView):
         try:
             payment_url = response.json()["data"]["link"]
         except (ValueError, KeyError):
+            # Update the transaction status to failed if the payment link cannot be generated
+            transaction.status = Transaction.FAILED
+            transaction.save()
             return Response({"error": "An error occurred while processing your request. Please try again later."}, status=500)
-        
+
         # Redirect the user to the payment URL
-        return redirect(payment_url)
+        return redirect(payment_url + f"?amount={amount}")
+
 
 
 # Webhook View
 
-import json
-import base64
-import hmac
-from hashlib import sha256
+from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponseBadRequest, HttpResponse
 from rest_framework.views import APIView
-from rest_framework.response import Response
-from decimal import Decimal
 
-
+from .models import Transaction
 
 class FlutterwaveWebhook(APIView):
+    @csrf_exempt
     def post(self, request):
-        secret_key = settings.FLUTTERWAVE_SECRET_KEY  # replace with your Flutterwave secret key
-        signature = request.META.get('HTTP_VERIF_HASH')
-        if not signature:
-            return Response({"error": "No signature found."}, status=400)
+        # Retrieve the transaction reference and status from the webhook payload
+        tx_ref = request.data.get('tx_ref')
+        status = request.data.get('status')
 
-        data = request.body
-        hashed_payload = hmac.new(secret_key.encode('utf-8'), msg=data, digestmod=sha256).digest()
-        computed_signature = base64.b64encode(hashed_payload).decode('utf-8')
+        # Retrieve the corresponding transaction from the database
+        transaction = Transaction.objects.filter(tx_ref=tx_ref).first()
+        if not transaction:
+            return HttpResponseBadRequest('Transaction not found')
 
-        if signature != computed_signature:
-            return Response({"error": "Invalid signature."}, status=400)
-
-        data = json.loads(data)
-        if data["event"] == "payment.completed":
-            tx_ref = data["data"]["tx_ref"]
-            amount_paid = Decimal(data["data"]["charged_amount"])
-            transaction = Transaction.objects.filter(tx_ref=tx_ref).first()
-            if transaction:
-                wallet = Wallet.objects.filter(user=transaction.user).first()
-                if wallet:
-                    wallet.balance += amount_paid
-                    wallet.save()
-                    return Response({"message": "Wallet balance updated successfully."}, status=200)
-                else:
-                    return Response({"error": "Wallet not found for the user."}, status=404)
-            else:
-                return Response({"error": "Transaction not found."}, status=404)
+        # Update the transaction status based on the webhook payload
+        if status == 'successful':
+            transaction.status = Transaction.COMPLETED
+            # Add the transaction amount to the user's wallet balance
+            wallet = Wallet.objects.get(user=transaction.user)
+            wallet.balance += transaction.amount
+            wallet.save()
         else:
-            return Response({"message": "Event not supported."}, status=400)
+            transaction.status = Transaction.FAILED
+
+        transaction.save()
+
+        # Return a successful response to Flutterwave
+        return HttpResponse('Success')
+
+
+
 
 
 import requests
