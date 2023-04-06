@@ -397,6 +397,7 @@ class FlutterwavePaymentLink(CreateAPIView):
             },
             "customer": {
                 "email": request.user.email,
+                "customer_name": customer.name
             },
             "customizations": {
                 "title": "RealOwn",
@@ -417,7 +418,7 @@ class FlutterwavePaymentLink(CreateAPIView):
             return Response({"error": "An error occurred while processing your request. Please try again later."}, status=500)
 
         # Redirect the user to the payment URL
-        return redirect(payment_url + f"?amount={amount}")
+        return redirect (payment_url + f"?amount={amount}")
 
 
 
@@ -452,7 +453,7 @@ class FlutterwaveWebhook(APIView):
             transaction.status = Transaction.FAILED
 
         transaction.save()
-
+        print(tx_ref, status)
         # Return a successful response to Flutterwave
         return HttpResponse('Success')
 

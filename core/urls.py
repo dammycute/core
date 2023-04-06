@@ -16,6 +16,20 @@ from drf_yasg import openapi
 
 ...
 
+swagger_settings = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header'
+        }
+    },
+
+    'SECURITY_REQUIREMENTS': {
+        'Bearer': []
+    }
+}
+
 schema_view = get_schema_view(
    openapi.Info(
       title="RealOwn API",
