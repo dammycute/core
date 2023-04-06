@@ -424,41 +424,78 @@ class FlutterwavePaymentLink(CreateAPIView):
 
 # Webhook View
 
-from django.views.decorators.csrf import csrf_exempt
-from django.http import HttpResponseBadRequest, HttpResponse
+# from django.views.decorators.csrf import csrf_exempt
+# from django.http import HttpResponseBadRequest, HttpResponse
+# from rest_framework.views import APIView
+# from rest_framework.permissions import AllowAny
+# from .models import Transaction
+
+# class FlutterwaveWebhook(APIView):
+#     permission_classes = [AllowAny,]
+#     @csrf_exempt
+#     def post(self, request):
+#         # Retrieve the transaction reference and status from the webhook payload
+#         tx_ref = request.data.get('tx_ref')
+#         status = request.data.get('status')
+
+#         # Retrieve the corresponding transaction from the database
+#         transaction = Transaction.objects.filter(tx_ref=tx_ref).first()
+#         if not transaction:
+#             return HttpResponseBadRequest('Transaction not found')
+
+#         # Update the transaction status based on the webhook payload
+#         if status == 'successful':
+#             transaction.status = Transaction.COMPLETED
+#             # Add the transaction amount to the user's wallet balance
+#             wallet = Wallet.objects.get(user=transaction.user)
+#             wallet.balance += transaction.amount
+#             wallet.save()
+#         else:
+#             transaction.status = Transaction.FAILED
+
+#         transaction.save()
+#         print(tx_ref, status)
+#         # Return a successful response to Flutterwave
+#         return HttpResponse('Success')
+
+
+from decimal import Decimal
 from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
-from .models import Transaction
+from .models import Transaction, Wallet
+from .utils import send_notification
+import json
 
 class FlutterwaveWebhook(APIView):
-    permission_classes = [AllowAny,]
-    @csrf_exempt
-    def post(self, request):
-        # Retrieve the transaction reference and status from the webhook payload
-        tx_ref = request.data.get('tx_ref')
-        status = request.data.get('status')
+    permission_classes = [AllowAny]
 
-        # Retrieve the corresponding transaction from the database
-        transaction = Transaction.objects.filter(tx_ref=tx_ref).first()
-        if not transaction:
-            return HttpResponseBadRequest('Transaction not found')
+    def post(self, request, format=None):
+        event = request.headers.get('X-Flutterwave-Event')
+        if event == 'charge.completed':
+            data = json.loads(request.body)
+            tx_ref = data.get('tx_ref')
+            amount = Decimal(data.get('amount', 0))
+            currency = data.get('currency')
+            status = data.get('status')
+            customer_id = data.get('customer').get('id')
 
-        # Update the transaction status based on the webhook payload
-        if status == 'successful':
-            transaction.status = Transaction.COMPLETED
-            # Add the transaction amount to the user's wallet balance
-            wallet = Wallet.objects.get(user=transaction.user)
-            wallet.balance += transaction.amount
-            wallet.save()
-        else:
-            transaction.status = Transaction.FAILED
-
-        transaction.save()
-        print(tx_ref, status)
-        # Return a successful response to Flutterwave
-        return HttpResponse('Success')
-
-
+            try:
+                transaction = Transaction.objects.get(tx_ref=tx_ref)
+                if transaction.status == Transaction.PENDING and status == 'successful':
+                    with transaction.atomic():
+                        wallet = Wallet.objects.select_for_update().get(user=transaction.user)
+                        wallet.balance += amount
+                        wallet.save()
+                        transaction.status = Transaction.COMPLETED
+                        transaction.save()
+                        # Send notification to user
+                        # send_notification(transaction.user, f"Your payment of {amount} {currency} has been received.")
+            except Transaction.DoesNotExist:
+                pass
+        print(event)
+        return Response(status=200)
 
 
 
