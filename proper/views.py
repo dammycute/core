@@ -465,7 +465,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from .models import Transaction, Wallet
-from .utils import send_notification
+# from .utils import send_notification
 import json
 
 class FlutterwaveWebhook(APIView):
