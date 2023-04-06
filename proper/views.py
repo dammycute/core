@@ -403,7 +403,8 @@ class FlutterwavePaymentLink(CreateAPIView):
                 "title": "RealOwn",
                 "description": "Payment for RealOwn",
                 "logo": "https://drive.google.com/file/d/1dIWGQYH3ayKiG_xUw-JQuXSt2cfuu4HF/view?usp=drivesdk"
-            }
+            },
+            "callback_url": request.build_absolute_uri(reverse('webhook'))
         }
 
         # Make a request to Flutterwave's API to create the payment link
