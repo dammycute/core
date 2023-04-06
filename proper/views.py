@@ -350,7 +350,7 @@ from rest_framework.generics import CreateAPIView
 from rest_framework.response import Response
 
 from .serializers import TransactionSerializer
-from .models import Transaction
+from .models import *
 from django.contrib.auth import get_user_model
 
 class FlutterwavePaymentLink(CreateAPIView):
@@ -427,10 +427,11 @@ class FlutterwavePaymentLink(CreateAPIView):
 from django.views.decorators.csrf import csrf_exempt
 from django.http import HttpResponseBadRequest, HttpResponse
 from rest_framework.views import APIView
-
+from rest_framework.permissions import AllowAny
 from .models import Transaction
 
 class FlutterwaveWebhook(APIView):
+    permission_classes = [AllowAny,]
     @csrf_exempt
     def post(self, request):
         # Retrieve the transaction reference and status from the webhook payload
