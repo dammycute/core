@@ -497,8 +497,12 @@ class FlutterwaveWebhook(APIView):
                         # send_notification(transaction.user, f"Your payment of {amount} {currency} has been received.")
             except Transaction.DoesNotExist:
                 pass
-        print(data)
+            print(data)
+        else: 
+            return Response(status=400)
+            
         return Response(status=200)
+        
 
 
 
