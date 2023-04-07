@@ -470,36 +470,37 @@ from .models import Transaction, Wallet
 
 class FlutterwaveWebhook(APIView):
     permission_classes = [AllowAny,]
-
     @csrf_exempt
-    def dispatch(self, request, *args, **kwargs):
-        return super().dispatch(request, *args, **kwargs)
-
     def post(self, request, format=None):
+        data = {}
         event = request.headers.get('X-Flutterwave-Event')
         if event == 'charge.completed':
-            data = json.loads(request.body)
-            tx_ref = data.get('tx_ref')
-            amount = Decimal(data.get('amount', 0))
-            currency = data.get('currency')
-            status = data.get('status')
-            customer_id = data.get('customer').get('id')
-            print(data)
             try:
-                transaction = Transaction.objects.get(tx_ref=tx_ref)
-                if transaction.status == Transaction.PENDING and status == 'successful':
-                    with transaction.atomic():
-                        wallet = Wallet.objects.select_for_update().get(user=transaction.user)
-                        wallet.balance += amount
-                        wallet.save()
-                        transaction.status = Transaction.COMPLETED
-                        transaction.save()
-                        # Send notification to user
-                        # send_notification(transaction.user, f"Your payment of {amount} {currency} has been received.")
-            except Transaction.DoesNotExist:
+                data = json.loads(request.body)
+                tx_ref = data.get('tx_ref')
+                amount = Decimal(data.get('amount', 0))
+                currency = data.get('currency')
+                status = data.get('status')
+                customer_id = data.get('customer').get('id')
+
+                try:
+                    transaction = Transaction.objects.get(tx_ref=tx_ref)
+                    if transaction.status == Transaction.PENDING and status == 'successful':
+                        with transaction.atomic():
+                            wallet = Wallet.objects.select_for_update().get(user=transaction.user)
+                            wallet.balance += amount
+                            wallet.save()
+                            transaction.status = Transaction.COMPLETED
+                            transaction.save()
+                            # Send notification to user
+                            # send_notification(transaction.user, f"Your payment of {amount} {currency} has been received.")
+                except Transaction.DoesNotExist:
+                    pass
+            except json.JSONDecodeError:
                 pass
-        
-        return HttpResponse(status=200)
+        print(data)
+        return Response(status=200)
+
 
         
 
