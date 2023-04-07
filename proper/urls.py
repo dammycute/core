@@ -9,7 +9,7 @@ urlpatterns = [
     path('buy/<int:product_id>/', Buy.as_view(), name='buy'),
     path('investments/', InvestmentListView.as_view(), name='investment-list'),
     path('payment/link/', FlutterwavePaymentLink.as_view(), name='payment_link'),
-    path('payment/webhook/', FlutterwaveWebhook.as_view(), name='webhook'),
+    path('payment/webhook/', Webhook.as_view(), name='webhook'),
     path('withdraw-to-bank/', WithdrawToBankAPIView.as_view(), name='withdraw-to-bank'),
     # path('property-lists/', PropertyListView.as_view()),
 

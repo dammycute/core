@@ -155,7 +155,7 @@ CELERY_RESULT_BACKEND = 'rpc://'
 
 FLUTTERWAVE_PUBLIC_KEY=config('FLUTTERWAVE_PUBLIC_KEY')
 FLUTTERWAVE_SECRET_KEY=config('FLUTTERWAVE_SECURITY_KEY')
-
+SECRET_HASH = config('HASH_CODE')
 
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
