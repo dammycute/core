@@ -53,7 +53,7 @@ urlpatterns = [
     path('auth/', include('djoser.urls.jwt')),
     path('api-auth/', include('rest_framework.urls')),
     path('user/', include('business.urls')),
-    path('proper/', include('proper.urls')),
+    path('product/', include('proper.urls')),
     # path('auth/', include('drf_social_oauth2.urls', namespace='drf'))
     # path('', include(router.urls)),
     # path('unique', UniquePropertyView.as_view()),

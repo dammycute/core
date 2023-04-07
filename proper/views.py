@@ -476,7 +476,7 @@ class FlutterwaveWebhook(APIView):
         event = request.headers.get('X-Flutterwave-Event')
         if event == 'charge.completed':
             try:
-                data = json.loads(request.body)
+                data = json.loads(request.body, content_type = 'application/json')
                 tx_ref = data.get('tx_ref')
                 amount = Decimal(data.get('amount', 0))
                 currency = data.get('currency')
