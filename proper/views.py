@@ -460,20 +460,21 @@ class FlutterwavePaymentLink(CreateAPIView):
 #         return HttpResponse('Success')
 
 
+import json
 from decimal import Decimal
+from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-
 from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from .models import Transaction, Wallet
-# from .utils import send_notification
-import json
 
 class FlutterwaveWebhook(APIView):
     permission_classes = [AllowAny,]
+
     @csrf_exempt
+    def dispatch(self, request, *args, **kwargs):
+        return super().dispatch(request, *args, **kwargs)
+
     def post(self, request, format=None):
         event = request.headers.get('X-Flutterwave-Event')
         if event == 'charge.completed':
@@ -497,11 +498,9 @@ class FlutterwaveWebhook(APIView):
                         # send_notification(transaction.user, f"Your payment of {amount} {currency} has been received.")
             except Transaction.DoesNotExist:
                 pass
-            print(data)
-        else: 
-            return Response(status=400)
-            
-        return Response(status=200)
+        print(data)
+        return HttpResponse(status=200)
+
         
 
 
