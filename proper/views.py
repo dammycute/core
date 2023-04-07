@@ -484,7 +484,7 @@ class FlutterwaveWebhook(APIView):
             currency = data.get('currency')
             status = data.get('status')
             customer_id = data.get('customer').get('id')
-
+            print(data)
             try:
                 transaction = Transaction.objects.get(tx_ref=tx_ref)
                 if transaction.status == Transaction.PENDING and status == 'successful':
@@ -498,7 +498,7 @@ class FlutterwaveWebhook(APIView):
                         # send_notification(transaction.user, f"Your payment of {amount} {currency} has been received.")
             except Transaction.DoesNotExist:
                 pass
-        print(data)
+        
         return HttpResponse(status=200)
 
         
