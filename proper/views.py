@@ -389,7 +389,7 @@ class FlutterwavePaymentLink(CreateAPIView):
             "tx_ref": tx_ref,
             "amount": str(amount),
             "currency": "NGN",
-            "redirect_url": "https://www.realowndigital.com/",
+            "redirect_url": "http://htcode12.pythonanywhere.com/",
             "payment_options": "card",
             "meta": {
                 "consumer_id": request.user.id,
@@ -497,7 +497,7 @@ class FlutterwaveWebhook(APIView):
                         # send_notification(transaction.user, f"Your payment of {amount} {currency} has been received.")
             except Transaction.DoesNotExist:
                 pass
-        print(event)
+        print(data)
         return Response(status=200)
 
 
