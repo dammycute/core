@@ -347,28 +347,46 @@ class FlutterwavePaymentLink(CreateAPIView):
 #         return HttpResponse('Success')
 
 
-import os
-import hashlib
+import json
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+import os
 
 @method_decorator(csrf_exempt, name='dispatch')
-class Webhook(APIView):
-    permission_classes = [AllowAny]
+class PaymentWebhook(APIView):
     def post(self, request, format=None):
-        secret_hash = settings.SECRET_HASH
+        secret_key = settings.FLUTTERWAVE_SECRET_KEY
         signature = request.headers.get("verifi-hash")
-        if signature is None or signature != hashlib.sha256(secret_hash.encode('utf-8')).hexdigest():
+        if signature is None or (signature != secret_key):
             # This request isn't from Flutterwave; discard
             return Response(status=status.HTTP_401_UNAUTHORIZED)
-        payload = request.body
-        # It's a good idea to log all received events.
-        log(payload)
-        # Do something (that doesn't take too long) with the payload
+        jsondata = request.body
+        data = json.loads(jsondata)
+        if data['event'] == 'charge.completed':
+            # Handle successful charge event
+            amount = data['data']['amount']
+            currency = data['data']['currency']
+            tx_ref = data['data']['tx_ref']
+            customer_name = data['data']['customer']['name']
+            customer_email = data['data']['customer']['email']
+            print(f'Payment received: {amount} {currency} from {customer_name} ({customer_email}) with transaction reference {tx_ref}')
+        elif data['event'] == 'charge.failed':
+            # Handle failed charge event
+            amount = data['data']['amount']
+            currency = data['data']['currency']
+            tx_ref = data['data']['tx_ref']
+            customer_name = data['data']['customer']['name']
+            customer_email = data['data']['customer']['email']
+            print(f'Payment failed: {amount} {currency} from {customer_name} ({customer_email}) with transaction reference {tx_ref}')
+        else:
+            # Ignore other events
+            pass
+
         return Response(status=status.HTTP_200_OK)
+
 
 
 
