@@ -357,6 +357,7 @@ import os
 
 @method_decorator(csrf_exempt, name='dispatch')
 class Webhook(APIView):
+    permission_classes=[AllowAny,]
     def post(self, request, format=None):
         secret_key = settings.FLUTTERWAVE_SECRET_KEY
         signature = request.headers.get("verifi-hash")
