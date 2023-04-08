@@ -353,13 +353,13 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-import os
+from decouple import config
 
 @method_decorator(csrf_exempt, name='dispatch')
 class Webhook(APIView):
     permission_classes=[AllowAny,]
     def post(self, request, format=None):
-        secret_key = settings.FLUTTERWAVE_SECRET_KEY
+        secret_key = config('FLUTTERWAVE_SECURITY_KEY')
         signature = request.headers.get("verifi-hash")
         if signature is None or (signature != secret_key):
             # This request isn't from Flutterwave; discard
