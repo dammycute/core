@@ -356,7 +356,7 @@ from django.utils.decorators import method_decorator
 import os
 
 @method_decorator(csrf_exempt, name='dispatch')
-class PaymentWebhook(APIView):
+class Webhook(APIView):
     def post(self, request, format=None):
         secret_key = settings.FLUTTERWAVE_SECRET_KEY
         signature = request.headers.get("verifi-hash")
