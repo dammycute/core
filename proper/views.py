@@ -359,7 +359,7 @@ from decouple import config
 class Webhook(APIView):
     permission_classes=[AllowAny,]
     def post(self, request, format=None):
-        secret_key = config('SECRET_HASH')
+        secret_key = settings.SECRET_HASH
         signature = request.headers.get("verifi-hash")
         if signature is None or (signature != secret_key):
             # This request isn't from Flutterwave; discard
