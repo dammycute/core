@@ -291,7 +291,7 @@ class FlutterwavePaymentLink(CreateAPIView):
                 "description": "Payment for RealOwn",
                 "logo": "https://drive.google.com/file/d/1dIWGQYH3ayKiG_xUw-JQuXSt2cfuu4HF/view?usp=drivesdk"
             },
-            "callback_url": request.build_absolute_uri(reverse('webhook'))
+            # "callback_url": request.build_absolute_uri(reverse('webhook'))
         }
 
         # Make a request to Flutterwave's API to create the payment link
@@ -359,11 +359,11 @@ from decouple import config
 class Webhook(APIView):
     permission_classes=[AllowAny,]
     def post(self, request, format=None):
-        secret_key = settings.SECRET_HASH
-        signature = request.headers.get("verifi-hash")
-        if signature is None or (signature != secret_key):
-            # This request isn't from Flutterwave; discard
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
+        # secret_key = settings.SECRET_HASH
+        # signature = request.headers.get("verifi-hash")
+        # if signature is None or (signature != secret_key):
+        #     # This request isn't from Flutterwave; discard
+        #     return Response(status=status.HTTP_401_UNAUTHORIZED)
         jsondata = request.body
         data = json.loads(jsondata)
         if data['event'] == 'charge.completed':
