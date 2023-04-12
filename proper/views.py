@@ -315,27 +315,23 @@ class FlutterwavePaymentLink(CreateAPIView):
 # Webhook View
 
 
-import json
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
-from decouple import config
+import json
+from .models import Transaction, Wallet, CustomUser, CustomerDetails
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 class Webhook(APIView):
     permission_classes=[AllowAny,]
+
     def post(self, request, format=None):
-        # secret_key = settings.SECRET_HASH
-        # signature = request.headers.get("verifi-hash")
-        # if signature is None or (signature != secret_key):
-        #     # This request isn't from Flutterwave; discard
-        #     return Response(status=status.HTTP_401_UNAUTHORIZED)
-        # transaction = Transaction.objects.get(tx_ref=tx_ref)
-        
         jsondata = request.body
         data = json.loads(jsondata)
+
         if data['event'] == 'charge.completed':
             # Handle successful charge event
             amount = data['data']['amount']
@@ -344,13 +340,29 @@ class Webhook(APIView):
             customer_name = data['data']['customer']['name']
             customer_email = data['data']['customer']['email']
 
+            try:
+                # Find the transaction with the given tx_ref
+                transaction = Transaction.objects.get(tx_ref=tx_ref)
+            except Transaction.DoesNotExist:
+                # This transaction doesn't exist in our database; ignore the event
+                return Response(status=status.HTTP_200_OK)
+
+            # Update the transaction status
             transaction.status = Transaction.COMPLETED
+            transaction.save()
+
             # Add the transaction amount to the user's wallet balance
-            wallet = Wallet.objects.get(user=request.user)
+            try:
+                wallet = Wallet.objects.get(user=transaction.user)
+            except Wallet.DoesNotExist:
+                # The user doesn't have a wallet; ignore the event
+                return Response(status=status.HTTP_200_OK)
+
             wallet.balance += amount
             wallet.save()
 
             print(f'Payment received: {amount} {currency} from {customer_name} ({customer_email}) with transaction reference {tx_ref}')
+
         elif data['event'] == 'charge.failed':
             # Handle failed charge event
             amount = data['data']['amount']
@@ -358,13 +370,26 @@ class Webhook(APIView):
             tx_ref = data['data']['tx_ref']
             customer_name = data['data']['customer']['name']
             customer_email = data['data']['customer']['email']
+
+            try:
+                # Find the transaction with the given tx_ref
+                transaction = Transaction.objects.get(tx_ref=tx_ref)
+            except Transaction.DoesNotExist:
+                # This transaction doesn't exist in our database; ignore the event
+                return Response(status=status.HTTP_200_OK)
+
+            # Update the transaction status
             transaction.status = Transaction.FAILED
+            transaction.save()
+
             print(f'Payment failed: {amount} {currency} from {customer_name} ({customer_email}) with transaction reference {tx_ref}')
+
         else:
             # Ignore other events
             pass
 
         return Response(status=status.HTTP_200_OK)
+
 
 
 
