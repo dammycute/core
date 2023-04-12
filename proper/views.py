@@ -378,7 +378,7 @@ class Webhook(APIView):
 
             transaction.status = Transaction.COMPLETED
             # Add the transaction amount to the user's wallet balance
-            wallet = Wallet.objects.get(user=transaction.user)
+            wallet = Wallet.objects.get(user=request.user)
             wallet.balance += transaction.amount
             wallet.save()
 
