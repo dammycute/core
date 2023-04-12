@@ -315,13 +315,14 @@ class FlutterwavePaymentLink(CreateAPIView):
 # Webhook View
 
 
-from django.views.decorators.csrf import csrf_exempt
+import json
 from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
-import json
-from .models import Transaction, Wallet, CustomUser, CustomerDetails
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from decouple import config
+
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -389,7 +390,6 @@ class Webhook(APIView):
             pass
 
         return Response(status=status.HTTP_200_OK)
-
 
 
 
