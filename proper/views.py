@@ -272,6 +272,8 @@ class FlutterwavePaymentLink(CreateAPIView):
             "Content-Type": "application/json"
         }
 
+        name = customer.first_name + customer.last_name
+
         payload = {
             "tx_ref": tx_ref,
             "amount": str(amount),
@@ -284,7 +286,7 @@ class FlutterwavePaymentLink(CreateAPIView):
             },
             "customer": {
                 "email": request.user.email,
-                "customer_name": customer.first_name + customer.last_name
+                "customer_name": name
             },
             "customizations": {
                 "title": "RealOwn",
@@ -371,7 +373,7 @@ class Webhook(APIView):
             amount = data['data']['amount']
             currency = data['data']['currency']
             tx_ref = data['data']['tx_ref']
-            customer_name = data['data']['customer']['customer_name']
+            customer_name = data['data']['customer']['name']
             customer_email = data['data']['customer']['email']
 
             transaction.status = Transaction.COMPLETED
