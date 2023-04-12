@@ -286,7 +286,7 @@ class FlutterwavePaymentLink(CreateAPIView):
             },
             "customer": {
                 "email": request.user.email,
-                "customer_name": name
+                "name": name
             },
             "customizations": {
                 "title": "RealOwn",
