@@ -272,7 +272,7 @@ class FlutterwavePaymentLink(CreateAPIView):
             "Content-Type": "application/json"
         }
 
-        name = customer.first_name + customer.last_name
+        # name =  + customer.last_name
 
         payload = {
             "tx_ref": tx_ref,
@@ -286,7 +286,7 @@ class FlutterwavePaymentLink(CreateAPIView):
             },
             "customer": {
                 "email": request.user.email,
-                "name": name
+                "name": customer.first_name,
             },
             "customizations": {
                 "title": "RealOwn",
@@ -314,40 +314,6 @@ class FlutterwavePaymentLink(CreateAPIView):
 
 # Webhook View
 
-# from django.views.decorators.csrf import csrf_exempt
-# from django.http import HttpResponseBadRequest, HttpResponse
-# from rest_framework.views import APIView
-# from rest_framework.permissions import AllowAny
-# from .models import Transaction
-
-# class FlutterwaveWebhook(APIView):
-#     permission_classes = [AllowAny,]
-#     @csrf_exempt
-#     def post(self, request):
-#         # Retrieve the transaction reference and status from the webhook payload
-#         tx_ref = request.data.get('tx_ref')
-#         status = request.data.get('status')
-
-#         # Retrieve the corresponding transaction from the database
-#         transaction = Transaction.objects.filter(tx_ref=tx_ref).first()
-#         if not transaction:
-#             return HttpResponseBadRequest('Transaction not found')
-
-#         # Update the transaction status based on the webhook payload
-#         if status == 'successful':
-#             transaction.status = Transaction.COMPLETED
-#             # Add the transaction amount to the user's wallet balance
-#             wallet = Wallet.objects.get(user=transaction.user)
-#             wallet.balance += transaction.amount
-#             wallet.save()
-#         else:
-#             transaction.status = Transaction.FAILED
-
-#         transaction.save()
-#         print(tx_ref, status)
-#         # Return a successful response to Flutterwave
-#         return HttpResponse('Success')
-
 
 import json
 from rest_framework.views import APIView
@@ -366,6 +332,8 @@ class Webhook(APIView):
         # if signature is None or (signature != secret_key):
         #     # This request isn't from Flutterwave; discard
         #     return Response(status=status.HTTP_401_UNAUTHORIZED)
+        # transaction = Transaction.objects.get(tx_ref=tx_ref)
+        
         jsondata = request.body
         data = json.loads(jsondata)
         if data['event'] == 'charge.completed':
@@ -388,7 +356,7 @@ class Webhook(APIView):
             amount = data['data']['amount']
             currency = data['data']['currency']
             tx_ref = data['data']['tx_ref']
-            customer_name = data['data']['customer']['customer_name']
+            customer_name = data['data']['customer']['name']
             customer_email = data['data']['customer']['email']
             transaction.status = Transaction.FAILED
             print(f'Payment failed: {amount} {currency} from {customer_name} ({customer_email}) with transaction reference {tx_ref}')
