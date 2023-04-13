@@ -143,9 +143,15 @@ class Buy(generics.CreateAPIView):
             investment.current_value = total_price * (1 + ((roi / 12) / 100) * elapsed_months)
             investment.save()
 
+            result = {
+                'product': product.property_name,
+                'slots': slots,
+                'investment_id': investment.id,
+            }
+
             # Trigger Celery task to update current value each month
-            update_investment_value.apply_async(args=[investment.id], eta=investment.end_date.replace(day=1))
-            return Response({'investment': investment.pk}, status=status.HTTP_201_CREATED)
+            # update_investment_value.apply_async(args=[investment.id], eta=investment.end_date.replace(day=1))
+            return Response(result, status=status.HTTP_201_CREATED)
         except Property.DoesNotExist:
             raise ValidationError({'property': 'Invalid property id'})
         # except Wallet.DoesNotExist:
