@@ -302,7 +302,7 @@ class FlutterwavePaymentLink(CreateAPIView):
                 "logo": "https://drive.google.com/file/d/1dIWGQYH3ayKiG_xUw-JQuXSt2cfuu4HF/view?usp=drivesdk"
             },
             "bank_transfer_options": {
-                expires: 3600
+                "expires": 3600
             },
             # "callback_url": request.build_absolute_uri(reverse('webhook'))
         }
