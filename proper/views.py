@@ -294,7 +294,7 @@ class FlutterwavePaymentLink(CreateAPIView):
             },
             "customer": {
                 "email": request.user.email,
-                "name": customer.first_name + customer.last_name,
+                "name": customer.first_name + " " + customer.last_name,
             },
             "customizations": {
                 "title": "RealOwn",
@@ -351,6 +351,7 @@ class Webhook(APIView):
             tx_ref = data['data']['tx_ref']
             customer_name = data['data']['customer']['name']
             customer_email = data['data']['customer']['email']
+            payment_option = data['data']['payment_options']
 
             try:
                 # Find the transaction with the given tx_ref
@@ -373,7 +374,16 @@ class Webhook(APIView):
             wallet.balance += amount
             wallet.save()
 
-            print(f'Payment received: {amount} {currency} from {customer_name} ({customer_email}) with transaction reference {tx_ref}')
+            result_log = {
+                'transaction_reference': tx_ref,
+                'amount': amount,
+                'currency': currency,
+                'Name': customer_name,
+                'Email': customer_email,
+                'Payment_option': payment_option
+            }
+
+            print(result_log)
 
         elif data['event'] == 'charge.failed':
             # Handle failed charge event
