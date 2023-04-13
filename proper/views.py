@@ -147,7 +147,7 @@ class Buy(generics.CreateAPIView):
                 'product': product.property_name,
                 'slots': slots,
                 'investment_id': investment.id,
-                'message': f"You've purchased {slot} slot(s) of {product.property_name} successfully",
+                'message': f"You've purchased {slots} slot(s) of {product.property_name} successfully",
             }
 
             # Trigger Celery task to update current value each month
