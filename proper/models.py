@@ -76,27 +76,6 @@ class Transaction(models.Model):
 
 
 
-class Order(models.Model):
-    PAYMENT_STATUS_COMPLETE = 'C'
-    PAYMENT_STATUS_PENDING = 'P'
-    PAYMENT_STATUS_FAILED = 'F'
-
-    PAYMENT_STATUS_CHOICES = (
-        (PAYMENT_STATUS_COMPLETE, 'Complete'),
-        (PAYMENT_STATUS_PENDING, 'Pending'),
-        (PAYMENT_STATUS_FAILED, 'Failed'),
-    )
-    customer = models.ForeignKey(CustomerDetails, null=True, on_delete=models.CASCADE)
-    # product = models.ForeignKey(Property, null=True, on_delete=models.PROTECT)
-    Date_purchased = models.DateTimeField(auto_now_add=True)
-    Due_Date = models.DateTimeField(default = timezone.now, blank = True)
-    payment_status = models.CharField(max_length=1, choices = PAYMENT_STATUS_CHOICES, default=PAYMENT_STATUS_PENDING)
-
-    def __str__(self):
-        return 'Order'
-    # class Meta:
-        # verbose_name_plural = "Customer_Prop"
-
 class Investment(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     product = models.ForeignKey(Property, null=True, on_delete=models.CASCADE)

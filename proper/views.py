@@ -147,6 +147,7 @@ class Buy(generics.CreateAPIView):
                 'product': product.property_name,
                 'slots': slots,
                 'investment_id': investment.id,
+                'message': f"You've purchased {slot} slot(s) of {product.property_name} successfully",
             }
 
             # Trigger Celery task to update current value each month
@@ -158,7 +159,8 @@ class Buy(generics.CreateAPIView):
         #     raise ValidationError({'wallet': 'Wallet not found for the user'})
         except Exception as e:
             raise ValidationError({'error': str(e)})
-        
+
+    # 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 git===>        
 
 # ======== Sell Endpoint=========
 
