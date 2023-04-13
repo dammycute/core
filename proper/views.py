@@ -351,7 +351,7 @@ class Webhook(APIView):
             tx_ref = data['data']['tx_ref']
             customer_name = data['data']['customer']['name']
             customer_email = data['data']['customer']['email']
-            payment_option = data['data']['payment_options']
+            payment_method = data['data']['payment_options']
 
             try:
                 # Find the transaction with the given tx_ref
