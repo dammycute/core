@@ -280,26 +280,29 @@ class FlutterwavePaymentLink(CreateAPIView):
             "Content-Type": "application/json"
         }
 
-        # name =  + customer.last_name
+        # name =  
 
         payload = {
             "tx_ref": tx_ref,
             "amount": str(amount),
             "currency": "NGN",
             "redirect_url": "http://htcode12.pythonanywhere.com/",
-            "payment_options": "card",
+            "payment_options": "card, ussd, banktransfer",
             "meta": {
                 "consumer_id": request.user.id,
                 "consumer_mac": "92a3-912ba-1192a"
             },
             "customer": {
                 "email": request.user.email,
-                "name": customer.first_name,
+                "name": customer.first_name + customer.last_name,
             },
             "customizations": {
                 "title": "RealOwn",
                 "description": "Payment for RealOwn",
                 "logo": "https://drive.google.com/file/d/1dIWGQYH3ayKiG_xUw-JQuXSt2cfuu4HF/view?usp=drivesdk"
+            },
+            "bank_transfer_options": {
+                expires: 3600
             },
             # "callback_url": request.build_absolute_uri(reverse('webhook'))
         }
