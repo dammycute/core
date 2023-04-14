@@ -287,9 +287,10 @@ class FlutterwavePaymentLink(CreateAPIView):
             "amount": str(amount),
             "currency": "NGN",
             "redirect_url": "http://htcode12.pythonanywhere.com/",
-            "payment_options": "card, ussd, banktransfer",
+            
             "meta": {
                 "consumer_id": request.user.id,
+                "payment_options": "card, ussd, banktransfer",
                 "consumer_mac": "92a3-912ba-1192a"
             },
             "customer": {
