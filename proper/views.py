@@ -287,10 +287,9 @@ class FlutterwavePaymentLink(CreateAPIView):
             "amount": str(amount),
             "currency": "NGN",
             "redirect_url": "http://htcode12.pythonanywhere.com/",
-            
+            "payment_options": "card, ussd, banktransfer",
             "meta": {
                 "consumer_id": request.user.id,
-                "payment_options": "card, ussd, banktransfer",
                 "consumer_mac": "92a3-912ba-1192a"
             },
             "customer": {
@@ -344,6 +343,7 @@ class Webhook(APIView):
     def post(self, request, format=None):
         jsondata = request.body
         data = json.loads(jsondata)
+        print(data)
 
         if data['event'] == 'charge.completed':
             # Handle successful charge event
@@ -352,7 +352,7 @@ class Webhook(APIView):
             tx_ref = data['data']['tx_ref']
             customer_name = data['data']['customer']['name']
             customer_email = data['data']['customer']['email']
-            payment_method = data['meta']['payment_options']
+            # payment_method = data['data']['payment_options']
 
             try:
                 # Find the transaction with the given tx_ref
