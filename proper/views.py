@@ -410,34 +410,36 @@ class Webhook(APIView):
 # ========= Activity Endpoint ========
 class ActivityEndpoint(APIView):
     def get(self, request, format=None):
-        user = request.user
-        fund_wallet = Transaction.objects.filter(user=user)
-        buy_property = Investment.objects.filter(user=user)
-        transaction_details = []
+        try:
+            user = request.user
+            fund_wallet = Transaction.objects.filter(user=user)
+            buy_property = Investment.objects.filter(user=user)
+            transaction_details = []
 
-        for transaction in fund_wallet:
-            transction_details.append(
-                transaction_type = "Wallet Funding",
-                amount = transaction.amount,
-                transaction_reference = transaction.tx_ref,
-                payment_type = transaction.payment_type,
-                receiver = transaction.customer.first_name + ' ' + transaction.customer.last_name
-            )
-        
-        for transaction in buy_property:
-            transction_details.append(
-                transaction_type = "Purchase of Property",
-                amount = transaction.current_value,
-                transaction_reference = transaction.id,
-                slots_numbers = transaction.slots,
-                start_date = transaction.start_date,
-                end_date = transaction.end_date,
-                product = transaction.product.property_name
-                
-            )
+            for transaction in fund_wallet:
+                transaction_details.append({
+                    'transaction_type' : "Wallet Funding",
+                    'amount' : transaction.amount,
+                    'transaction_reference' : transaction.tx_ref,
+                    'payment_type' : transaction.payment_type,
+                    'receiver' : transaction.customer.first_name + ' ' + transaction.customer.last_name
+                })
+            
+            for transaction in buy_property:
+                transction_details.append({
+                    'transaction_type' : "Purchase of Property",
+                    'amount' : transaction.current_value,
+                    'transaction_reference' : transaction.id,
+                    'slots_numbers' : transaction.slots,
+                    'start_date' : transaction.start_date,
+                    'end_date' : transaction.end_date,
+                    'product' : transaction.product.property_name
+                    
+                })
 
-        return Response({'transaction_detail': transaction_details})
-
+            return Response({'transaction_detail': transaction_details})
+        except Exception as e:
+            return Response({'error': str(e)}, status= status.HTTP_400_BAD_REQUEST)
 
 
 
