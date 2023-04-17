@@ -375,16 +375,7 @@ class Webhook(APIView):
             wallet.balance += amount
             wallet.save()
 
-            result_log = {
-                'transaction_reference': tx_ref,
-                'amount': amount,
-                'currency': currency,
-                'Name': customer_name,
-                'Email': customer_email,
-                'Payment_option': payment_option
-            }
-
-            print(result_log)
+            
 
         elif data['event'] == 'charge.failed':
             # Handle failed charge event
@@ -405,13 +396,13 @@ class Webhook(APIView):
             transaction.status = Transaction.FAILED
             transaction.save()
 
-            print(f'Payment failed: {amount} {currency} from {customer_name} ({customer_email}) with transaction reference {tx_ref}')
+            return Response(f'Payment failed: {amount} {currency} from {customer_name} ({customer_email}) with transaction reference {tx_ref}')
 
         else:
             # Ignore other events
             pass
 
-        return Response(status=status.HTTP_200_OK)
+        return Response(data, status=status.HTTP_200_OK)
 
 
 
