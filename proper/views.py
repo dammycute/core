@@ -426,7 +426,7 @@ class ActivityEndpoint(APIView):
                 })
             
             for transaction in buy_property:
-                transction_details.append({
+                transaction_details.append({
                     'transaction_type' : "Purchase of Property",
                     'amount' : transaction.current_value,
                     'transaction_reference' : transaction.id,
