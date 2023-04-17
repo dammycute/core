@@ -145,7 +145,7 @@ class Buy(generics.CreateAPIView):
 
             result = {
                 'product': product.property_name,
-                'amount': current_value,
+                'amount': investment.current_value,
                 'slots': slots,
                 'investment_id': investment.id,
                 'message': f"You've purchased {slots} slot(s) of {product.property_name} successfully",
