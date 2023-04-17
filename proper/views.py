@@ -352,7 +352,7 @@ class Webhook(APIView):
             tx_ref = data['data']['tx_ref']
             customer_name = data['data']['customer']['name']
             customer_email = data['data']['customer']['email']
-            # payment_method = data['data']['payment_options']
+            payment_method = data['data']['payment_type']
 
             try:
                 # Find the transaction with the given tx_ref
@@ -363,6 +363,7 @@ class Webhook(APIView):
 
             # Update the transaction status
             transaction.status = Transaction.COMPLETED
+            transaction.payment_type = payment_method
             transaction.save()
 
             # Add the transaction amount to the user's wallet balance
