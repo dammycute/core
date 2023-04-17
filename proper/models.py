@@ -70,7 +70,7 @@ class Transaction(models.Model):
     tx_ref = models.CharField(max_length=50, unique=True, null=True)
     wallet = models.ForeignKey(Wallet, on_delete=models.CASCADE, null=True)
     payment_type = models.CharField(max_length=50, null=True)
-
+    timestamp = models.DateTimeField(auto_now_add=True, null=True)
     def __str__(self):
         return str(self.tx_ref)
 

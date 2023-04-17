@@ -12,5 +12,5 @@ urlpatterns = [
     path('payment/webhook/', Webhook.as_view(), name='webhook'),
     path('withdraw-to-bank/', WithdrawToBankAPIView.as_view(), name='withdraw-to-bank'),
     # path('property-lists/', PropertyListView.as_view()),
-
+    path('activity/', ActivityEndpoint.as_view(), name='activity')
 ]

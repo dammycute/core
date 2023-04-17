@@ -145,6 +145,7 @@ class Buy(generics.CreateAPIView):
 
             result = {
                 'product': product.property_name,
+                'amount': current_value,
                 'slots': slots,
                 'investment_id': investment.id,
                 'message': f"You've purchased {slots} slot(s) of {product.property_name} successfully",
@@ -319,7 +320,7 @@ class FlutterwavePaymentLink(CreateAPIView):
             return Response({"error": "An error occurred while processing your request. Please try again later."}, status=500)
 
         # Redirect the user to the payment URL
-        return redirect (payment_url + f"?amount={amount}")
+        return Response (payment_url + f"?amount={amount}")
 
 
 
@@ -404,6 +405,38 @@ class Webhook(APIView):
             pass
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+# ========= Activity Endpoint ========
+class ActivityEndpoint(APIView):
+    def get(self, request, format=None):
+        user = request.user
+        fund_wallet = Transaction.objects.filter(user=user)
+        buy_property = Investment.objects.filter(user=user)
+        transaction_details = []
+
+        for transaction in fund_wallet:
+            transction_details.append(
+                transaction_type = "Wallet Funding",
+                amount = transaction.amount,
+                transaction_reference = transaction.tx_ref,
+                payment_type = transaction.payment_type,
+                receiver = transaction.customer.first_name + ' ' + transaction.customer.last_name
+            )
+        
+        for transaction in buy_property:
+            transction_details.append(
+                transaction_type = "Purchase of Property",
+                amount = transaction.current_value,
+                transaction_reference = transaction.id,
+                slots_numbers = transaction.slots,
+                start_date = transaction.start_date,
+                end_date = transaction.end_date,
+                product = transaction.product.property_name
+                
+            )
+
+        return Response({'transaction_detail': transaction_details})
 
 
 
