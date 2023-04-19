@@ -17,59 +17,13 @@ class IsOwnerOfObject(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         return obj == request.user
 
-class UserDetailView(CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, viewsets.GenericViewSet):
-    permission_classes = [IsAuthenticated, IsOwnerOfObject]
 
-    queryset = CustomerDetails.objects.all()
-    serializer_class = UserDetailSerializer
-    
-
-    
-    @action(detail=False, methods=['POST'])
-    def perform_create(self, request, ):
-        # (customer) = CustomerDetails.objects.create(user=request.user, **request.data) 
-        if request.method == 'POST':
-            serializer = UserDetailSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save(user= self.request.user)
-            return Response(serializer.data)
-    #     try:
-    #         with transaction.atomic():
-    #             customers = CustomerDetails.objects.get(user=self.request.user)
-    #             return Response({"details": "Customer Details already exist."})
-    #     except CustomerDetails.DoesNotExist:
-
-    #         serializer.save(user=self.request.user)
-
-    @action(detail=False, methods=['GET', 'PUT'])
-    def me(self, request):
-        (customer, created) = CustomerDetails.objects.get_or_create(user_id=request.user.id) 
-        if request.method == 'GET':
-            serializer = UserDetailSerializer(customer)
-            return Response(serializer.data)
-        elif request.method == 'PUT':
-            serializer = UserDetailSerializer(customer, data=request.data)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response(serializer.data)
 
 
 # Let's Start Over
 
-# class CustomerView(APIView):
-#     permission_classes = [IsAuthenticated,]
 
-#     def post(self, request):
-#         try:
-#             profile = CustomerDetails.objects.get(user=self.request.user)
-#             return Response({"detail": "Profile already exists."}, status=status.HTTP_409_CONFLICT)
-#         except CustomerDetails.DoesNotExist:
-#             serializer = CustomerSerializer(data=request.data)
-#             if serializer.is_valid():
-#                 serializer.save(user=self.request.user)
-#                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+from rest_framework.exceptions import ValidationError, PermissionDenied
 
 
 class CustomerView(generics.CreateAPIView):
