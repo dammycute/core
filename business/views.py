@@ -56,19 +56,35 @@ class UserDetailView(CreateModelMixin, RetrieveModelMixin, UpdateModelMixin, vie
 
 # Let's Start Over
 
-class CustomerView(APIView):
-    permission_classes = [IsAuthenticated,]
+# class CustomerView(APIView):
+#     permission_classes = [IsAuthenticated,]
 
-    def post(self, request):
-        try:
-            profile = CustomerDetails.objects.get(user=self.request.user)
-            return Response({"detail": "Profile already exists."}, status=status.HTTP_409_CONFLICT)
-        except CustomerDetails.DoesNotExist:
-            serializer = CustomerSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save(user=self.request.user)
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#     def post(self, request):
+#         try:
+#             profile = CustomerDetails.objects.get(user=self.request.user)
+#             return Response({"detail": "Profile already exists."}, status=status.HTTP_409_CONFLICT)
+#         except CustomerDetails.DoesNotExist:
+#             serializer = CustomerSerializer(data=request.data)
+#             if serializer.is_valid():
+#                 serializer.save(user=self.request.user)
+#                 return Response(serializer.data, status=status.HTTP_201_CREATED)
+#             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+class CustomerView(generics.CreateAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = CustomerSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        return CustomerDetails.objects.filter(user=user)
+
+    def perform_create(self, serializer):
+        profile_exists = self.get_queryset().exists()
+        if profile_exists:
+            raise ValidationError("Profile already exists.")
+        serializer.save(user=self.request.user)
 
 
 
