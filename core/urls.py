@@ -3,11 +3,7 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 # from business.views import *
 from rest_framework.routers import DefaultRouter
-from business.views import UserDetailView
-# from proper.views import OrderViewSet
-router = DefaultRouter()
-router.register('customer', UserDetailView)
-# router.register('order', OrderViewSet)
+
 from proper.views import DashboardView
 # urlpatterns = router.urls,
 from rest_framework import permissions
