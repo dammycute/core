@@ -172,7 +172,7 @@ class Buy(generics.CreateAPIView):
         # except Wallet.DoesNotExist:
         #     raise ValidationError({'wallet': 'Wallet not found for the user'})
         except Exception as e:
-            raise ValidationError({'error': str(e)})
+            return Response({'error': str(e)}, status= status.HTTP_400_BAD_REQUEST)
 
     # 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 git===>        
 
