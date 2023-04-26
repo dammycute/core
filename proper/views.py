@@ -120,6 +120,12 @@ class Buy(generics.CreateAPIView):
             slots = int(request.data.get('slots'))
             if slots <= 0:
                 raise ValidationError({'slots': 'Slots must be greater than zero'})
+            
+            if product.slots_available < slots:
+                raise ValidationError({slots: f'Only {product.slots_available} slots available'})
+            product.slots_available -= slots
+            product.save()
+
             total_price = product.price_per_slot * slots
             roi = product.roi
             
@@ -143,6 +149,8 @@ class Buy(generics.CreateAPIView):
             investment.current_value = total_price * (1 + ((roi / 12) / 100) * elapsed_months)
             investment.save()
 
+            
+
             result = {
                 'product': product.property_name,
                 'amount': investment.current_value,
@@ -150,6 +158,11 @@ class Buy(generics.CreateAPIView):
                 'investment_id': investment.id,
                 'message': f"You've purchased {slots} slot(s) of {product.property_name} successfully",
             }
+
+            if product.slots_available == 0:
+                result['message'] = f"All {product.property_name} slots have been sold"
+            else:
+                result['message'] = f"You've purchased {slots} slot(s) of {product.property_name} successfully"
 
             # Trigger Celery task to update current value each month
             # update_investment_value.apply_async(args=[investment.id], eta=investment.end_date.replace(day=1))
@@ -422,7 +435,8 @@ class ActivityEndpoint(APIView):
                     'amount' : transaction.amount,
                     'transaction_reference' : transaction.tx_ref,
                     'payment_type' : transaction.payment_type,
-                    'receiver' : transaction.customer.first_name + ' ' + transaction.customer.last_name
+                    'receiver' : transaction.customer.first_name + ' ' + transaction.customer.last_name,
+                    'timestamp' : transaction.timestamp,
                 })
             
             for transaction in buy_property:
